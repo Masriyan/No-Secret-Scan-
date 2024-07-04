@@ -21,15 +21,25 @@ url URL of the website to scan
 
 options:
 -h, --help show this help message and exit
+
 -r REGEX, --regex REGEX
+
 Custom regex pattern for search
+
 -fs FIND_SPECIFIC [FIND_SPECIFIC ...], --find-specific FIND_SPECIFIC [FIND_SPECIFIC ...]
+
 Specific secret strings to find
+
 -o OUTPUT, --output OUTPUT
+
 Output filename with format (e.g., results.json or results.csv)
+
 -ua USER_AGENT, --user-agent USER_AGENT
+
 Custom User-Agent
+
 --dns DNS Custom DNS server
+
 --no-verify-ssl Disable SSL certificate verification
 
 
