@@ -7,24 +7,25 @@ from tqdm import tqdm
 import json
 import csv
 import time
-import socket
 import dns.resolver
+from typing import List, Dict, Optional
+from requests.exceptions import SSLError
 
 # ASCII Banner
-def print_banner():
+def print_banner() -> None:
     ascii_banner = pyfiglet.figlet_format("No Secret Scan")
     print(ascii_banner)
     print("by sudo3rs\n")
 
 # Function to resolve domain using a custom DNS server
-def resolve_domain(domain, dns_server):
+def resolve_domain(domain: str, dns_server: str) -> str:
     resolver = dns.resolver.Resolver()
     resolver.nameservers = [dns_server]
     answers = resolver.resolve(domain, 'A')
     return answers[0].address
 
 # Function to find credentials in HTML content
-def find_credentials(url, user_agent, custom_regex=None, specific_strings=None, progress_bar=None, dns_server=None, verify_ssl=True):
+def find_credentials(url: str, user_agent: str, custom_regex: Optional[str] = None, specific_strings: Optional[List[str]] = None, progress_bar: Optional[tqdm] = None, dns_server: Optional[str] = None, verify_ssl: bool = True) -> Dict[str, List[str]]:
     headers = {'User-Agent': user_agent}
     domain = url.split("//")[-1].split("/")[0]
 
@@ -37,20 +38,25 @@ def find_credentials(url, user_agent, custom_regex=None, specific_strings=None, 
             print(f"DNS resolution failed: {e}")
             return {}
 
-    retries = 3
-    for attempt in range(retries):
+    for attempt in range(3):
         try:
             response = requests.get(url, headers=headers, verify=verify_ssl)
+            response.raise_for_status()
             break
+        except SSLError as e:
+            if not verify_ssl:
+                print(f"SSL error ignored: {e}")
+                continue
+            print(f"SSL error: {e}")
+            return {}
         except requests.exceptions.RequestException as e:
-            print(f"Attempt {attempt + 1} of {retries} failed: {e}")
-            time.sleep(5)  # Wait for 5 seconds before retrying
+            print(f"Attempt {attempt + 1} failed: {e}")
+            time.sleep(5)
     else:
         print(f"Failed to fetch the URL: {url}")
         return {}
 
     credentials_found = {}
-
     if response.status_code == 200:
         soup = BeautifulSoup(response.text, 'html.parser')
         text_content = soup.get_text()
@@ -90,23 +96,21 @@ def find_credentials(url, user_agent, custom_regex=None, specific_strings=None, 
     return credentials_found
 
 # Function to save results to CSV
-def save_to_csv(data, filename):
+def save_to_csv(data: Dict[str, List[str]], filename: str) -> None:
     with open(filename, 'w', newline='') as csvfile:
-        fieldnames = ['Type', 'Match']
-        writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
-
-        writer.writeheader()
+        writer = csv.writer(csvfile)
+        writer.writerow(['Type', 'Match'])
         for key, values in data.items():
             for value in values:
-                writer.writerow({'Type': key, 'Match': value})
+                writer.writerow([key, value])
 
 # Function to save results to JSON
-def save_to_json(data, filename):
+def save_to_json(data: Dict[str, List[str]], filename: str) -> None:
     with open(filename, 'w') as jsonfile:
         json.dump(data, jsonfile, indent=4)
 
 # Main function to run the script
-def main():
+def main() -> None:
     print_banner()
 
     parser = argparse.ArgumentParser(description='Scan websites for secrets and hardcoded credentials.')
@@ -149,14 +153,8 @@ def main():
         print(f"Results saved to {output_file}")
 
     # Placeholder: Implement progress bar for search engine lookups
-    for i in tqdm(range(100), desc="Looking up search engines"):
-        pass
-
-    # Placeholder: Call search engine functions
-    # search_shodan(shodan_api_key, url)
-    # search_censys(censys_api_key, url)
-    # search_virustotal(virustotal_api_key, url)
-    # search_fofa(fofa_api_key, url)
+    for _ in tqdm(range(100), desc="Looking up search engines"):
+        time.sleep(0.1)  # Simulate work
 
 if __name__ == '__main__':
     main()
